@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+
+Sitemap: http://informatics.unep-wcmc.org/blog/sitemap.xml 

@@ -1,0 +1,456 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>A simple walkthrough of D3's enter-update-exit data pattern with Google Maps - UNEP-WCMC Informatics</title>
+  <meta name="author" content="UNEP-WCMC Informatics">
+
+  
+  <meta name="description" content="Note: the following article assumes the reader has at least some basic knowledge of d3. If one has never used d3 before I would suggest reading the &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://informatics.unep-wcmc.org/blog/blog/2013/06/18/a-simple-walkthrough-of-d3-s-enter-update-exit-data-pattern-with-google-maps/">
+  <link href="/blog/favicon.png" rel="icon">
+  <link href="/blog/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/blog/javascripts/modernizr-2.0.js"></script>
+  <script src="/blog/javascripts/ender.js"></script>
+  <script src="/blog/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/blog/atom.xml" rel="alternate" title="UNEP-WCMC Informatics" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-40718895-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/blog/">UNEP-WCMC Informatics</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/blog/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:informatics.unep-wcmc.org/blog" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/blog/">Blog</a></li>
+  <li><a href="/blog/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">A Simple Walkthrough of D3's Enter-update-exit Data Pattern With Google Maps</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T21:52:00+01:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><strong>Note</strong>: the following article assumes the reader has at least some basic knowledge of <strong>d3</strong>. If one has never used <strong>d3</strong> before I would suggest reading the <a href="http://d3js.org/">introduction</a> on the library homepage and <a href="http://bost.ocks.org/mike/join/">Thinking with Joins</a> before continuing the read.</p>
+
+<p>I have recently been working at a <a href="http://wcmc.io/map">simple visualization</a>, where some circles, generated in <strong>d3</strong> and representing ip addresses, are layered out on <strong>Google Maps</strong>. It turned out that using <strong>d3</strong> made it surprisingly clean and easy, to handle the user-driven visualization changes. Surprisingly because, as others, I somehow struggled to fully understand and correctly use <strong>d3</strong>.</p>
+
+<p>To give an idea about how <strong>d3</strong> can be misused, here is an excerpt from some <a href="https://github.com/deciob/data-story/blob/master/app/controllers/viz/bar_base.coffee">old code</a> of mine:</p>
+
+<div><script src='https://gist.github.com/5808864.js?file=writings-1-a.coffee'></script>
+<noscript><pre><code># first check if there is no histogram around...
+if @g.selectAll('path')[0].length == 0
+  @bar = @g.selectAll(&quot;g.bar&quot;)
+    .data(data)
+    .enter().append(&quot;g&quot;)
+  @bar.append(&quot;rect&quot;)
+#
+# ...more code...
+#
+else
+  @g.selectAll(&quot;rect&quot;)
+    .data(data)
+    .transition()</code></pre></noscript></div>
+
+
+<p>Although this code works, inserting a <code>selectAll</code> into an if statement, to check if the selection is empty, is nasty and bad stuff! But thinking about <code>selectAll</code> as a placeholder for my data is something that took some time for me to feel comfortable with.</p>
+
+<p>These days, after some struggles and experiences, I think that writing simple <strong>Data Driven Documents</strong> with <strong>d3</strong>, once one manages to grab a few fundamental concepts such as the <strong>enter-update-exit</strong> pattern, can become surprisingly easy. And hopefully, the following walk-trough will help others to understand.</p>
+
+<h3>The architecture basics.</h3>
+
+<p>The <a href="http://wcmc.io/map">page</a> in question is a <strong>backbone.js</strong> application that is part of a larger <strong>rails</strong> website, but can easily be analyzed in isolation. The starting point for this code was the following <a href="http://bl.ocks.org/mbostock/899711">block</a>.</p>
+
+<p>It has two views, one for the map and one for listing the ip location details that relate to the circles on the map.</p>
+
+<p>The data rendered on <strong>Google Maps</strong> is clustered on 3 levels, depending on the zoom: country, city and individual locations. The user can click on the circles (the data) and these are re-drawn as active, whilst a list of information appears on the bottom view.</p>
+
+<p>Frankly, a quite simple application, with not much interaction. Nevertheless, even the most innocent and naive <strong>JavaScript</strong> Web application, we all know, can easily grow into an inextricable mess. <strong>Backbone</strong> here helps, but the <strong>update-data&#8211;update-view</strong> pattern doesn&#8217;t always fit well with a <strong>Google Maps</strong> data representation. It is here that <strong>d3</strong> enters the stage and helps, with its <strong>enter-update-exit data</strong> pattern, to keep things surprisingly simple.</p>
+
+<h3>How the data is structured and handled.</h3>
+
+<p>For every cluster level we have a <strong>backbone</strong> model-collection and all of them inherit a number of methods from the base-class <a href="https://github.com/unepwcmc/wukumurl/blob/master/app/assets/javascripts/map/models/base.js.coffee">base.js.coffee</a>. The most important of these is <code>parseDataForMap</code>, that returns the current collection data in the form expected by <strong>d3</strong>&#8217;s <code>selection.data</code> method in <a href="https://github.com/unepwcmc/wukumurl/blob/master/app/assets/javascripts/map/views/map_view.js.coffee">map_view.js.coffee</a>.</p>
+
+<p>For clarity, this is an example of an object in the array returned from <code>parseDataForMap</code> on the countries collection:</p>
+
+<div><script src='https://gist.github.com/5808864.js?file=writings-1-b.json'></script>
+<noscript><pre><code>[
+  {
+    &quot;lat&quot;:35.8706911472,
+    &quot;lng&quot;:104.1904317352,
+    &quot;state&quot;:&quot;inactive&quot;,
+    &quot;size&quot;:2,
+    &quot;id&quot;:122,
+    &quot;uique_id&quot;:262.0611228824
+  },
+]</code></pre></noscript></div>
+
+
+<h3>The application flow.</h3>
+
+<p>Almost all the code related to <strong>d3</strong> and <strong>Google Maps</strong> lives in <a href="https://github.com/unepwcmc/wukumurl/blob/master/app/assets/javascripts/map/views/map_view.js.coffee">map_view.js.coffee</a>. Here, two key functions occupy the scene: <code>initOverlays</code> and <code>drawSvg</code>.</p>
+
+<p><strong>initOverlays</strong></p>
+
+<div><script src='https://gist.github.com/5808864.js?file=writings-1-c.coffee'></script>
+<noscript><pre><code>initOverlays: -&gt;
+  self = this
+  # Remove loading gif
+  $(&quot;.ajax-loader&quot;).hide()
+  @data = @collection.parseDataForMap()
+  @max = @collection.getMaxVal()
+  # Create an overlay.
+  overlay = new google.maps.OverlayView()
+
+  # Add the container when the overlay is added to the map.
+  overlay.onAdd = -&gt;
+    layer = d3.select(@getPanes().overlayMouseTarget)
+      .append(&quot;div&quot;).attr(&quot;class&quot;, &quot;locations&quot;)
+    self.drawSvg = _.bind self.drawSvg, @, layer, self
+
+  overlay.draw = -&gt;
+    self.drawSvg self.data
+
+  # Bind our overlay to the map…
+  overlay.setMap @map</code></pre></noscript></div>
+
+
+<p><code>initOverlays</code> sets up the initial <strong>Google Maps</strong> configuration and initial overlay (the <strong>SVG</strong> circles related to the country clusters). The nested methods here refer to the <a href="https://developers.google.com/maps/documentation/javascript/">Google Maps JavaScript API</a>. It is worth noticing:</p>
+
+<ol>
+<li>In <code>overlay.onAdd</code> we are setting a <strong>d3</strong> selection in the map, for our <strong>SVG</strong> elements, and we are then partially applying the <code>drawSvg</code> method with it, because this initial selection never changes across the entire life of the application.</li>
+<li>Once the map is set (after calling <code>overlay.setMap</code>) <code>drawSvg</code> is called with the initial data. At this point the <strong>SVG</strong> circles, representing the ip locations clustered on the country centroids, will appear on the map.</li>
+</ol>
+
+
+<p><strong>drawSvg</strong></p>
+
+<div><script src='https://gist.github.com/5808864.js?file=writings-1-d.coffee'></script>
+<noscript><pre><code>drawSvg: (layer, self, data) -&gt;
+  #
+  # ... more code...
+  #
+  marker = layer.selectAll(&quot;svg&quot;)
+    .data(data, (d) -&gt; d.uique_id)
+    .each(transform) # update existing markers
+    .attr(&quot;class&quot;, (d) -&gt; d.state)
+
+  enter = marker.enter().append(&quot;svg:svg&quot;)
+    .each(transform)
+    .attr(&quot;class&quot;, (d) -&gt; d.state)
+
+  # Lets position the text first (under the circle), 
+  # so it does not interfere with the click events. 
+  # Only works because our circles are semi-transparent.
+  txt = enter.append(&quot;svg:text&quot;)
+    .each(transformTxt)
+    .attr(&quot;dy&quot;, &quot;.31em&quot;)
+    .text((d) -&gt; d.size)
+    .style(&quot;font-size&quot;, (d) -&gt; 
+      s = self.getFontSize d.size
+      &quot;#{s}px&quot;
+    )
+
+  circle = enter.append(&quot;svg:circle&quot;)
+    .each(addEventListeners)
+    .each(transformCircle)
+
+  exit = marker.exit()
+    #.each(removeEventListener) # TODO?
+    .remove()</code></pre></noscript></div>
+
+
+<p>And finally we get to analyze the <code>drawSvg</code> method, that hopefully will shed some light on how <strong>d3</strong>&#8217;s <strong>enter-update-exit</strong> pattern works. Let&#8217;s walk through it across three different states of our application.</p>
+
+<h4>1. We start from the initial data load state.</h4>
+
+<ul>
+<li><code>marker = layer.selectAll("svg")</code> selects all the <strong>SVG</strong> elements within our layer element (the div we have created earlier, in the <code>initOverlays</code> method, remember?). The first time this is called, the selection will be empty, just a placeholder for future elements.</li>
+<li><code>.data(data, (d) -&gt; d.uique_id)</code> is the data join. Note how I am passing a key function as the second argument. Not passing this key value, that uniquely identifies each object, would insert a bug in the code when changing levels (country-city-locations). The data objects entering or exiting the selection would be compared by array index, rather than object id and would no longer be distinguishable.</li>
+<li><code>.each(transform)</code> is used to correctly set the elements on <strong>Google Maps</strong>. It is called before and after the <code>enter</code> point because of how <strong>Google Maps</strong> works: on every zoom change <code>overlay.draw</code> will be called and everything will need updating again.</li>
+<li><code>enter = marker.enter().append("svg:svg")</code> is the entry point where our new <strong>SVG</strong>s are appended to the DOM. On the first call all the data is new and entering. The function then continues appending text (numbers indicating the size of the data) and circle elements to our recently created <strong>SVG</strong> elements.</li>
+<li><code>exit = marker.exit().remove()</code> finally cleans up the old data. On the first load though, all data is new and nothing is in exit.</li>
+</ul>
+
+
+<h4>2. So what happens when we pass from zoom level 5 to 6 and our data is now clustered around cities and no longer around country centroids?</h4>
+
+<ul>
+<li><code>marker = layer.selectAll("svg")</code> is now no longer empty.</li>
+<li><code>.data(data, (d) -&gt; d.uique_id)</code>, here new data is coming into the selection, with new unique_ids, all different from the existing ids (the country cluster objects).</li>
+<li><code>enter = marker.enter().append("svg:svg")</code>, the incoming data is all new, so we have an entry point for every object in the data array.</li>
+<li><code>exit = marker.exit().remove()</code>, the exit is full, all the old, existing data is now old, because the object ids no longer match, so they are all removed.</li>
+</ul>
+
+
+<h4>3. But what about the <code>update</code> portion of the pattern? Are we using it here at all? Yes we are. The data gets updated when the user selects, with a click, an <strong>SVG</strong> circle on the map.</h4>
+
+<ul>
+<li><code>marker = layer.selectAll("svg")</code>, again, this selection is not empty.</li>
+<li><code>.data(data, (d) -&gt; d.uique_id)</code>, new data is coming in, but in this case, none of the object ids have changed!</li>
+<li><code>enter = marker.enter().append("svg:svg")</code>, so no new data is appended.</li>
+<li><code>exit = marker.exit().remove()</code>: and no old data is removed. But&#8230;</li>
+<li><code>.attr("class", (d) -&gt; d.state)</code>, the state attribute will be updated, only for the selected <strong>SVG</strong>.</li>
+</ul>
+
+
+<h3>Conclusion</h3>
+
+<p>The pattern here is quite clear. The <strong>SVG</strong> circles are drawn. The user interacts with the map, zooming in and out and clicking on the <strong>SVG</strong> elements. These events will fire the appropriate application events and the <code>drawSvg</code> function is repeatedly called with different, updated data. We are not interested on what kind of event originated the call and in what changes are happening to the data. We can always happily and blindly call <code>drawSvg</code> and the enter-update-exit points in the code will correctly handle all the rest for us.</p>
+
+<p>Decio</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Decio Battaglia</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-06-18T21:52:00+01:00" pubdate data-updated="true">Jun 18<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/blog/categories/-google/'>"google</a>, <a class='category' href='/blog/blog/categories/javascript-/'>JavaScript,</a>, <a class='category' href='/blog/blog/categories/coffescript-/'>coffeScript,</a>, <a class='category' href='/blog/blog/categories/d3-/'>d3,</a>, <a class='category' href='/blog/blog/categories/maps-/'>maps"</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://informatics.unep-wcmc.org/blog/blog/2013/06/18/a-simple-walkthrough-of-d3-s-enter-update-exit-data-pattern-with-google-maps/" data-via="" data-counturl="http://informatics.unep-wcmc.org/blog/blog/2013/06/18/a-simple-walkthrough-of-d3-s-enter-update-exit-data-pattern-with-google-maps/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/blog/2013/05/28/communicating-science/" title="Previous Post: Communicating Science with Data Visualisation">&laquo; Communicating Science with Data Visualisation</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/blog/2013/07/24/summer-of-code/" title="Next Post: Summer of Code">Summer of Code &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>About Us</h1>
+  <p>We're the Informatics department at conservation organisation UNEP-WCMC in Cambridge. We build cool web apps, often with maps, then talk about them here.</p>
+  <ul>
+    <li><a href="http://informatics.unep-wcmc.org/">Informatics home page</a></li>
+    <li><a href="http://www.meetup.com/Cambridge-Ruby-User-Group">Cambridge Ruby User Group</a></li>
+    <li><a href="https://github.com/unepwcmc">@unepwcmc</a> on GitHub</li>
+  </ul>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/blog/2013/07/24/summer-of-code/">Summer of Code</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/blog/2013/06/18/a-simple-walkthrough-of-d3-s-enter-update-exit-data-pattern-with-google-maps/">A simple walkthrough of D3's enter-update-exit data pattern with Google Maps</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/blog/2013/05/28/communicating-science/">Communicating Science with Data Visualisation</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/blog/2013/05/20/field-testing-in-abu-dhabi/">Field testing in Abu Dhabi</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/blog/2013/05/07/report-from-krakow/">Report from Kraków</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>Team Coderwall Badges</h1>
+  <p id="coderwall-root">
+    <script type="text/javascript">
+      function append_coderwall(args){
+        var badges = args["data"]["badges"];
+        var wall = '';
+        for ( var i = 0; i < badges.length; i++ ) {
+          var badgeEl = document.getElementById(badges[i]["name"]);
+          if (badgeEl === null){
+            var badgeEl = document.createElement('img');
+            badgeEl.id = badges[i]["name"];
+            badgeEl.src = badges[i]["badge"];
+            badgeEl.alt = badges[i]["name"];
+            badgeEl.title = badges[i]["name"] + ' - ' + badges[i]["description"];
+            var badgeLink = document.createElement('a');
+            badgeLink.href = "http://coderwall.com/team/unep-wcmc/";
+            badgeLink.appendChild(badgeEl);
+            document.getElementById('coderwall-root').appendChild(badgeLink);
+          }
+        }
+      }
+    </script>
+
+    
+      <script src="http://coderwall.com/agnessa.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/simaob.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/th3james.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/adammulligan.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/timwilkinson.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/craigmmills.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/migtorres.json?callback=append_coderwall"></script>
+    
+      <script src="http://coderwall.com/deciob.json?callback=append_coderwall"></script>
+    
+  </p>
+</section>
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - UNEP-WCMC Informatics -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
