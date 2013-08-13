@@ -4,7 +4,7 @@
   <title><![CDATA[UNEP-WCMC Informatics]]></title>
   <link href="http://informatics.unep-wcmc.org/blog/atom.xml" rel="self"/>
   <link href="http://informatics.unep-wcmc.org/blog/"/>
-  <updated>2013-08-13T00:00:19+01:00</updated>
+  <updated>2013-08-13T09:22:33+01:00</updated>
   <id>http://informatics.unep-wcmc.org/blog/</id>
   <author>
     <name><![CDATA[UNEP-WCMC Informatics]]></name>
@@ -129,7 +129,7 @@ Nevertheless there are ways to try to avoid them or as a last resort to
 find them early on and fix them. <a
 href="https://coderwall.com/adammulligan">Adam Mulligan</a> closed these
 Ignites session talking about
-different types of bugs and how do we handle them at UNEP-WCMC.</p>
+different types of bugs and how we handle them at UNEP-WCMC.</p>
 
 <p>
   <script async class="speakerdeck-embed"
