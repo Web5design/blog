@@ -4,7 +4,7 @@
   <title><![CDATA[UNEP-WCMC Informatics]]></title>
   <link href="http://informatics.unep-wcmc.org/blog/atom.xml" rel="self"/>
   <link href="http://informatics.unep-wcmc.org/blog/"/>
-  <updated>2013-08-13T09:22:33+01:00</updated>
+  <updated>2013-08-13T09:34:01+01:00</updated>
   <id>http://informatics.unep-wcmc.org/blog/</id>
   <author>
     <name><![CDATA[UNEP-WCMC Informatics]]></name>
@@ -22,7 +22,7 @@
 we did it again last week.</p>
 
 <p>This time around we had nine five minute talks. In these talks we
-presented our latest projects, we covered of the
+presented our latest projects, we covered the
 challenges faced in the development of IT projects, and we introduced
 ways to overcome the challenges and improve our processes.</p>
 
@@ -128,7 +128,7 @@ projects.</p>
 Nevertheless there are ways to try to avoid them or as a last resort to
 find them early on and fix them. <a
 href="https://coderwall.com/adammulligan">Adam Mulligan</a> closed these
-Ignites session talking about
+Ignite sessions talking about
 different types of bugs and how we handle them at UNEP-WCMC.</p>
 
 <p>
